@@ -1,6 +1,8 @@
 import discord 
 from discord.ext import commands
+from bs4 import BeautifulSoup
 import requests
+
 
 class TLH(commands.Cog):
     def __init__(self, client):
@@ -61,6 +63,23 @@ class TLH(commands.Cog):
             await ctx.send(embed=e)
             await PlaySound(ctx, "tlh/matins-magnificat.mp3")
         
+    @commands.command(name="tlh", description="Get the lyrics to a hymn.")
+    async def tlh(self, ctx, *arg):
+        if(RepresentsInt(arg[0])):
+            hymnID = "{0:03}".format(int(arg[0]))
+            html_link = "https://clcgracelutheranchurch.org/fridley/hymns/tlh/tlh" + hymnID + ".htm"
+            print("Trying to retrieve " + html_link)
+            try:
+                html_hymn = requests.get(html_link)
+                print(html_hymn.status_code)
+                soup = BeautifulSoup(html_hymn.content, "html.parser")
+                
+                await BuildHymnText(ctx, soup)
+                
+                    
+                
+            except:
+                await ctx.send("Please input a valid hymn.")
         
         
         
@@ -89,5 +108,37 @@ async def PlaySound(ctx, source):
     else:
         await ctx.send("Join a voice channel first.")
     
+
+def EmbedBlock(header, text):
+        return discord.Embed(title=header, description=text, color=0xeb3434)
+
+async def BuildHymnText(ctx, soup):
+    header = soup.title.string
+    print(header)
+    body = soup.p.strings
+    text = ""
+    for string in body:
+        if(string == "\n"):
+            if(text != ""):
+                e = EmbedBlock(header, text)
+                await ctx.send(embed=e)
+                text=""
+                header=""
+        else: 
+            text += string
+    if(text != ""):
+        e = EmbedBlock(header, text)
+        await ctx.send(embed=e)
+        #e = EmbedBlock(header, string)
+        #await ctx.send(string)
+
 def setup(client):
         client.add_cog(TLH(client))
+
+def RepresentsInt(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
